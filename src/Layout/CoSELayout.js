@@ -724,7 +724,7 @@ CoSELayout.prototype.clearDummyComplexGraphs = function (comp)
  * Dummy complexes (placed in the "dummyComplexList") are removed from the
  * graph.
  */
-CoSELayout.prototype.removeDummyComplexes()
+CoSELayout.prototype.removeDummyComplexes = function()
 {
   // remove dummy complexes and connect children to original parent
   this.dummyComplexList.forEach(function (dummyComplex) {
