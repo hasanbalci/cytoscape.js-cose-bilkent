@@ -72,6 +72,11 @@ CoSELayout.prototype.initParameters = function () {
 };
 
 CoSELayout.prototype.layout = function () {
+  // pre-layout step for tiling
+  this.groupZeroDegreeMembers();
+  this.applyDFSOnComplexes();
+  
+  // original cose layout
   var createBendsAsNeeded = LayoutConstants.DEFAULT_CREATE_BENDS_AS_NEEDED;
   if (createBendsAsNeeded)
   {
@@ -80,7 +85,12 @@ CoSELayout.prototype.layout = function () {
   }
 
   this.level = 0;
-  return this.classicLayout();
+  var retVal = this.classicLayout();
+  
+  // post layout step for tiling
+  this.repopulateComplexes();
+  
+  return retVal;
 };
 
 CoSELayout.prototype.classicLayout = function () {
@@ -440,5 +450,296 @@ CoSELayout.prototype.calcRepulsionRange = function () {
   // formula is 2 x (level + 1) x idealEdgeLength
   return (2 * (this.level + 1) * this.idealEdgeLength);
 };
+
+// Section: Tiling Methods
+
+/**
+ * This method finds all the zero degree nodes in the graph which are not
+ * owned by a complex node. Zero degree nodes at each level are grouped
+ * together and placed inside a dummy complex to reduce bounds of root
+ * graph.
+ */
+CoSELayout.prototype.groupZeroDegreeMembers = function () {
+  var childComplexMap = new HashMap();
+  this.getGraphManager().getGraphs().forEach(function (ownerGraph) {
+    var zeroDegreeNodes = [];
+
+    // do not process complex nodes (their members are already owned)
+    if (ownerGraph.getParent().type != null && ownerGraph.getParent().isComplex()) {
+      return;
+    }
+
+    ownerGraph.getNodes().forEach(function (node) {
+
+      if (calcGraphDegree(node) === 0)
+      {
+        zeroDegreeNodes.add(node);
+      }
+    });
+
+    if (zeroDegreeNodes.size() > 1)
+    {
+      // create a new dummy complex
+      var complex = newNode(null);
+      // TODO revise this
+      //complex.type = SbgnPDConstants.COMPLEX;
+      complex.label = "DummyComplex_" + ownerGraph.getParent().label;
+
+      ownerGraph.add(complex);
+
+      var childGraph = newGraph(null);
+
+      zeroDegreeNodes.forEach(function (zeroNode) {
+        ownerGraph.remove(zeroNode);
+        childGraph.add(zeroNode);
+      });
+      // TODO revise dummyComplexList
+      this.dummyComplexList.add(complex);
+      childComplexMap.put(complex, childGraph);
+    }
+  });
+
+  this.dummyComplexList.forEach(function (complex) {
+    this.graphManager.add(childComplexMap.get(complex), complex);
+  });
+
+  this.getGraphManager().updateBounds();
+
+  this.graphManager.resetAllNodes();
+  this.graphManager.resetAllNodesToApplyGravitation();
+  this.graphManager.resetAllEdges();
+  this.calculateNodesToApplyGravitationTo();
+};
+
+/**
+ * This method searched unmarked complex nodes recursively, because they may
+ * contain complex children. After the order is found, child graphs of each
+ * complex node are cleared.
+ */
+CoSELayout.prototype.applyDFSOnComplexes = function ()
+{
+  // LGraph>();
+  this.getAllNodes().forEach(function (comp) {
+    if (!comp.isComplex || !comp.isComplex()) {
+      return;
+    }
+
+    // complex is found, recurse on it until no visited complex remains.
+    if (!comp.visited)
+      this.DFSVisitComplex(comp);
+  });
+
+  // clear each complex
+  // TODO revise complexOrder
+  this.complexOrder.forEach(function (comp) {
+    clearComplex(comp);
+  });
+
+  this.getGraphManager().updateBounds();
+
+  this.getGraphManager().resetAllNodes();
+  this.getGraphManager().resetAllNodesToApplyGravitation();
+  this.getGraphManager().resetAllEdges();
+};
+
+/**
+* Reassigns the complex content. The outermost complex is placed first.
+*/
+CoSELayout.prototype.repopulateComplexes = function() {
+  var self = this;
+  this.emptiedDummyComplexMap.keySet().forEach(function(comp){
+    var chGr = this.emptiedDummyComplexMap.get(comp);
+    comp.setChild(chGr);
+    this.getGraphManager().getGraphs().add(chGr);
+  });
+
+  for (var i = this.complexOrder.size() - 1; i >= 0; i--)
+  {
+      var comp = this.complexOrder.get(i);
+      // TODO revise childGraphMap
+      var chGr = this.childGraphMap.get(comp);
+
+      // repopulate the complex
+      comp.setChild(chGr);
+
+      // if the child graph is not null, adjust the positions of members
+      if (chGr != null)
+      {
+          // adjust the positions of the members
+          this.getGraphManager().getGraphs().add(chGr);
+          
+          // TODO revise memberPackMap
+          var pack = this.memberPackMap.get(comp);
+          pack.adjustLocations(comp.getLeft(), comp.getTop());
+      }
+  }
+  
+  // TODO revise emptiedDummyComplexMap
+  this.emptiedDummyComplexMap.keySet().forEach(function(){
+     var chGr = this.emptiedDummyComplexMap.get(comp);
+
+     self.adjustLocation(comp, chGr);
+  });
+
+  this.removeDummyComplexes();
+
+  // reset
+  this.getGraphManager().resetAllNodes();
+  this.getGraphManager().resetAllNodesToApplyGravitation();
+  this.getGraphManager().resetAllEdges();
+  this.calculateNodesToApplyGravitationTo();
+};
+
+CoSELayout.prototype.clearComplex = function (comp) {
+  var pack = null;
+  var childGr = comp.getChild();
+  this.childGraphMap.put(comp, childGr);
+
+  if (childGr == null)
+    return;
+
+  pack = new MemberPack(childGr);
+  this.memberPackMap.put(comp, pack);
+
+  if (this.dummyComplexList.contains(comp))
+  {
+    comp.getChild().getNodes().forEach(function (o) {
+      clearDummyComplexGraphs(o);
+    });
+  }
+
+  this.getGraphManager().getGraphs().remove(childGr);
+  comp.setChild(null);
+
+  comp.setWidth(pack.getWidth());
+  comp.setHeight(pack.getHeight());
+
+  // Redirect the edges of complex members to the complex.
+  if (childGr != null)
+  {
+    childGr.getNodes().forEach(function (ch) {
+      var chNd = ch;
+
+      chNd.getEdges().forEach(function (edge) {
+        if (edge.getSource() == chNd)
+        {
+          chNd.getEdges().remove(edge);
+          edge.setSource(comp);
+          comp.getEdges().add(edge);
+        }
+        else if (edge.getTarget() == chNd)
+        {
+          chNd.getEdges().remove(edge);
+          edge.setTarget(comp);
+          comp.getEdges().add(edge);
+        }
+      });
+    });
+  }
+};
+
+/**
+ * This method recurses on the complex objects. If a node does not contain
+ * any complex nodes or all the nodes in the child graph is already marked,
+ * it is reported. (Depth first)
+ * 
+ */
+CoSELayout.prototype.DFSVisitComplex = function (node)
+{
+  var self = this;
+  if (node.getChild() != null)
+  {
+    node.getChild().getNodes().forEach(function (sbgnChild) {
+      self.DFSVisitComplex(sbgnChild);
+    });
+  }
+
+  // TODO add node.containsUnmarkedComplex() if not exists
+  if (node.isComplex() && !node.containsUnmarkedComplex())
+  {
+    this.complexOrder.add(node);
+    node.visited = true;
+    return;
+  }
+};
+
+/**
+ * Adjust locations of children of given complex wrt. the location of the
+ * complex
+ */
+CoSELayout.prototype.adjustLocation = function (comp, chGr)
+{
+  var rect = calculateBounds(false, chGr.getNodes());
+
+  var differenceX = parseInt(rect.x - comp.getLeft());
+  var differenceY = parseInt(rect.y - comp.getTop());
+
+  // TODO revise it
+  // if the parent graph is a compound, add compound margins
+//   if (!comp.type.equals(SbgnPDConstants.COMPLEX))
+//   {
+//       differenceX -= LayoutConstants.COMPOUND_NODE_MARGIN;
+//       differenceY -= LayoutConstants.COMPOUND_NODE_MARGIN;
+//   }
+
+  for (var j = 0; j < chGr.getNodes().size(); j++)
+  {
+    var s = chGr.getNodes().get(j);
+
+    s.setLocation(s.getLeft() - differenceX
+            + CoSEConstants.COMPLEX_MEM_HORIZONTAL_BUFFER, s.getTop()
+            - differenceY + CoSEConstants.COMPLEX_MEM_VERTICAL_BUFFER);
+
+    if (s.getChild() != null)
+      adjustLocation(s, s.getChild());
+  }
+};
+
+/**
+ * Recursively removes all dummy complex nodes (previously created to tile
+ * group degree-zero nodes) from the graph.
+ */
+CoSELayout.prototype.clearDummyComplexGraphs = function (comp)
+{
+  if (comp.getChild() == null || comp.isDummyCompound) {
+    return;
+  }
+  
+  comp.getChild().getNodes().forEach(function (childNode) {
+    if (childNode.getChild() != null && childNode.getEdges().size() == 0)
+      clearDummyComplexGraphs(childNode);
+  });
+
+  if (this.graphManager.getGraphs().contains(comp.getChild())) {
+    if (calcGraphDegree(comp) == 0) {
+      this.emptiedDummyComplexMap.put(comp, comp.getChild());
+
+      this.getGraphManager().getGraphs().remove(comp.getChild());
+      comp.setChild(null);
+    }
+  }
+};
+
+/**
+ * Dummy complexes (placed in the "dummyComplexList") are removed from the
+ * graph.
+ */
+CoSELayout.prototype.removeDummyComplexes()
+{
+  // remove dummy complexes and connect children to original parent
+  this.dummyComplexList.forEach(function (dummyComplex) {
+    var childGraph = dummyComplex.getChild();
+    var owner = dummyComplex.getOwner();
+
+    this.getGraphManager().getGraphs().remove(childGraph);
+    dummyComplex.setChild(null);
+
+    owner.remove(dummyComplex);
+
+    childGraph.getNodes().forEach(function (s) {
+      owner.add(s);
+    });
+  });
+}
 
 module.exports = CoSELayout;
