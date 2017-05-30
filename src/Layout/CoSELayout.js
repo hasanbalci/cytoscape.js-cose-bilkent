@@ -526,6 +526,7 @@ CoSELayout.prototype.groupZeroDegreeMembers = function () {
  */
 CoSELayout.prototype.applyDFSOnComplexes = function ()
 {
+  var self = this;
   // LGraph>();
   this.getAllNodes().forEach(function (comp) {
     if (!comp.isComplex || !comp.isComplex()) {
@@ -534,12 +535,12 @@ CoSELayout.prototype.applyDFSOnComplexes = function ()
 
     // complex is found, recurse on it until no visited complex remains.
     if (!comp.visited)
-      this.DFSVisitComplex(comp);
+      self.DFSVisitComplex(comp);
   });
 
   // clear each complex
   this.complexOrder.forEach(function (comp) {
-    clearComplex(comp);
+    self.clearComplex(comp);
   });
 
   this.getGraphManager().updateBounds();

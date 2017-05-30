@@ -49,7 +49,7 @@ LNode.prototype.getChild = function ()
  * This method sets the child graph of this node. Only compound nodes will
  * have child graphs.
  */
-LNode.prototype.getChild = function (child)
+LNode.prototype.setChild = function (child)
 {
   if (child != null && child.getGraphManager() != this.graphManager) {
     throw "Child has different graph mgr!";
