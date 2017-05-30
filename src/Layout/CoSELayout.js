@@ -556,7 +556,9 @@ CoSELayout.prototype.repopulateComplexes = function() {
     comp.setChild(chGr);
     this.getGraphManager().getGraphs().push(chGr);
   });
-
+  
+  console.log(this.complexOrder.length);
+  
   for (var i = this.complexOrder.length - 1; i >= 0; i--)
   {
       var comp = this.complexOrder[i];
@@ -669,14 +671,15 @@ CoSELayout.prototype.DFSVisitComplex = function (node)
     node.getChild().getNodes().forEach(function (sbgnChild) {
       self.DFSVisitComplex(sbgnChild);
     });
-    
-    // TODO revise
-    if (!node.containsUnmarkedComplex())
-    {
-      this.complexOrder.push(node);
-      node.visited = true;
-      return;
-    }
+  }
+  
+  // TODO revise
+  if (node.getChild() != null && !node.containsUnmarkedComplex())
+  {
+    console.log(node.id + "\t" + node.label);
+    this.complexOrder.push(node);
+    node.visited = true;
+    return;
   }
 };
 
@@ -728,8 +731,8 @@ CoSELayout.prototype.clearDummyComplexGraphs = function (comp)
       self.clearDummyComplexGraphs(childNode);
   });
 
-  if (this.graphManager.getGraphs().contains(comp.getChild())) {
-    if (calcGraphDegree(comp) == 0) {
+  if (this.graphManager.getGraphs().indexOf(comp.getChild()) > 0) {
+    if (this.calcGraphDegree(comp) == 0) {
       this.emptiedDummyComplexMap.put(comp, comp.getChild());
 
       this.getGraphManager().getGraphs().remove(comp.getChild());

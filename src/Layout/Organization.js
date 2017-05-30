@@ -150,16 +150,16 @@ Organization.prototype.shiftToLastRow = function ()
 
   if (this.width - this.rowWidth[last] > diff && this.rowHeight[last] > node.getHeight())
   {
-    row.removeLast();
-    rows[last].push(node);
+    row.splice(row.length - 1, 1);
+    this.rows[last].push(node);
     this.rowWidth[longest] = this.rowWidth[longest] - diff;
     this.rowWidth[last] = this.rowWidth[last] + diff;
 
-    this.width = this.rowWidth[getLongestRowIndex()];
+    this.width = this.rowWidth[this.getLongestRowIndex()];
 
     // Update height of the organization
     var maxHeight = Number.MIN_VALUE;
-    for (var i = 0; i < row.size(); i++)
+    for (var i = 0; i < row.length; i++)
     {
       if (row[i].getHeight() > maxHeight)
         maxHeight = row[i].getHeight();
