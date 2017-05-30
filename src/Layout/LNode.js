@@ -45,6 +45,19 @@ LNode.prototype.getChild = function ()
   return this.child;
 };
 
+/**
+ * This method sets the child graph of this node. Only compound nodes will
+ * have child graphs.
+ */
+LNode.prototype.getChild = function (child)
+{
+  if (child != null && child.getGraphManager() != this.graphManager) {
+    throw "Child has different graph mgr!";
+  }
+
+  this.child = child;
+};
+
 LNode.prototype.getOwner = function ()
 {
   if (this.owner != null) {

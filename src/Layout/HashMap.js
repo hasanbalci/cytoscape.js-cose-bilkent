@@ -27,4 +27,8 @@ HashMap.prototype.keySet = function () {
   return this.keys;
 };
 
+HashMap.prototype.size = function () {
+  return this.keys.length;
+};
+
 module.exports = HashMap;

@@ -13,9 +13,16 @@ var Integer = require('./Integer');
 var IGeometry = require('./IGeometry');
 var LGraph = require('./LGraph');
 var Transform = require('./Transform');
+var HashMap = require('./HashMap');
 
 function CoSELayout() {
   FDLayout.call(this);
+  
+  this.childGraphMap = new HashMap();
+  this.complexOrder = [];
+  this.dummyComplexList = [];
+  this.emptiedDummyComplexMap = new HashMap();
+  this.memberPackMap = new HashMap();
 }
 
 CoSELayout.prototype = Object.create(FDLayout.prototype);
@@ -461,6 +468,7 @@ CoSELayout.prototype.calcRepulsionRange = function () {
  */
 CoSELayout.prototype.groupZeroDegreeMembers = function () {
   var childComplexMap = new HashMap();
+  var self = this;
   this.getGraphManager().getGraphs().forEach(function (ownerGraph) {
     var zeroDegreeNodes = [];
 
@@ -471,36 +479,36 @@ CoSELayout.prototype.groupZeroDegreeMembers = function () {
 
     ownerGraph.getNodes().forEach(function (node) {
 
-      if (calcGraphDegree(node) === 0)
+      if (self.calcGraphDegree(node) === 0)
       {
-        zeroDegreeNodes.add(node);
+        zeroDegreeNodes.push(node);
       }
     });
 
-    if (zeroDegreeNodes.size() > 1)
+    if (zeroDegreeNodes.length > 1)
     {
       // create a new dummy complex
-      var complex = newNode(null);
+      var complex = self.newNode(null);
       // TODO revise this
       //complex.type = SbgnPDConstants.COMPLEX;
       complex.label = "DummyComplex_" + ownerGraph.getParent().label;
 
       ownerGraph.add(complex);
 
-      var childGraph = newGraph(null);
+      var childGraph = self.newGraph(null);
 
       zeroDegreeNodes.forEach(function (zeroNode) {
         ownerGraph.remove(zeroNode);
         childGraph.add(zeroNode);
       });
-      // TODO revise dummyComplexList
-      this.dummyComplexList.add(complex);
+      
+      self.dummyComplexList.push(complex);
       childComplexMap.put(complex, childGraph);
     }
   });
 
   this.dummyComplexList.forEach(function (complex) {
-    this.graphManager.add(childComplexMap.get(complex), complex);
+    self.graphManager.add(childComplexMap.get(complex), complex);
   });
 
   this.getGraphManager().updateBounds();
@@ -530,7 +538,6 @@ CoSELayout.prototype.applyDFSOnComplexes = function ()
   });
 
   // clear each complex
-  // TODO revise complexOrder
   this.complexOrder.forEach(function (comp) {
     clearComplex(comp);
   });
@@ -553,10 +560,9 @@ CoSELayout.prototype.repopulateComplexes = function() {
     this.getGraphManager().getGraphs().add(chGr);
   });
 
-  for (var i = this.complexOrder.size() - 1; i >= 0; i--)
+  for (var i = this.complexOrder.length - 1; i >= 0; i--)
   {
-      var comp = this.complexOrder.get(i);
-      // TODO revise childGraphMap
+      var comp = this.complexOrder[i];
       var chGr = this.childGraphMap.get(comp);
 
       // repopulate the complex
@@ -568,13 +574,11 @@ CoSELayout.prototype.repopulateComplexes = function() {
           // adjust the positions of the members
           this.getGraphManager().getGraphs().add(chGr);
           
-          // TODO revise memberPackMap
           var pack = this.memberPackMap.get(comp);
           pack.adjustLocations(comp.getLeft(), comp.getTop());
       }
   }
   
-  // TODO revise emptiedDummyComplexMap
   this.emptiedDummyComplexMap.keySet().forEach(function(){
      var chGr = this.emptiedDummyComplexMap.get(comp);
 
@@ -682,9 +686,9 @@ CoSELayout.prototype.adjustLocation = function (comp, chGr)
 //       differenceY -= LayoutConstants.COMPOUND_NODE_MARGIN;
 //   }
 
-  for (var j = 0; j < chGr.getNodes().size(); j++)
+  for (var j = 0; j < chGr.getNodes().length; j++)
   {
-    var s = chGr.getNodes().get(j);
+    var s = chGr.getNodes()[j];
 
     s.setLocation(s.getLeft() - differenceX
             + CoSEConstants.COMPLEX_MEM_HORIZONTAL_BUFFER, s.getTop()
@@ -706,7 +710,7 @@ CoSELayout.prototype.clearDummyComplexGraphs = function (comp)
   }
   
   comp.getChild().getNodes().forEach(function (childNode) {
-    if (childNode.getChild() != null && childNode.getEdges().size() == 0)
+    if (childNode.getChild() != null && childNode.getEdges().length == 0)
       clearDummyComplexGraphs(childNode);
   });
 
@@ -726,12 +730,20 @@ CoSELayout.prototype.clearDummyComplexGraphs = function (comp)
  */
 CoSELayout.prototype.removeDummyComplexes = function()
 {
+  var self = this;
   // remove dummy complexes and connect children to original parent
   this.dummyComplexList.forEach(function (dummyComplex) {
     var childGraph = dummyComplex.getChild();
     var owner = dummyComplex.getOwner();
 
-    this.getGraphManager().getGraphs().remove(childGraph);
+    // Remove child graph from graphs of this
+    var graphs = self.getGraphManager().getGraphs();
+    var index = graphs.indexOf(childGraph);
+    
+    if (index > -1) {
+      graphs.splice(index, 1);
+    }
+    
     dummyComplex.setChild(null);
 
     owner.remove(dummyComplex);
@@ -740,6 +752,78 @@ CoSELayout.prototype.removeDummyComplexes = function()
       owner.add(s);
     });
   });
-}
+};
+
+/**
+ * This method returns the bounding rectangle of the given set of nodes with
+ * or without the margins
+ */
+CoSELayout.prototype.calculateBounds = function (isMarginIncluded, nodes)
+{
+  var boundLeft = Integer.MAX_VALUE;
+  var boundRight = Integer.MIN_VALUE;
+  var boundTop = Integer.MAX_VALUE;
+  var boundBottom = Integer.MIN_VALUE;
+  var nodeLeft;
+  var nodeRight;
+  var nodeTop;
+  var nodeBottom;
+
+  nodes.forEach(function (lNode) {
+    nodeLeft = parseInt(lNode.getLeft());
+    nodeRight = parseInt(lNode.getRight());
+    nodeTop = parseInt(lNode.getTop());
+    nodeBottom = parseInt(lNode.getBottom());
+
+    if (boundLeft > nodeLeft)
+      boundLeft = nodeLeft;
+
+    if (boundRight < nodeRight)
+      boundRight = nodeRight;
+
+    if (boundTop > nodeTop)
+      boundTop = nodeTop;
+
+    if (boundBottom < nodeBottom)
+      boundBottom = nodeBottom;
+  });
+
+
+  if (isMarginIncluded)
+  {
+    return new RectangleD(boundLeft
+            - CoSEConstants.COMPLEX_MEM_MARGIN, boundTop
+            - CoSEConstants.COMPLEX_MEM_MARGIN, boundRight
+            - boundLeft + 2 * CoSEConstants.COMPLEX_MEM_MARGIN,
+            boundBottom - boundTop + 2
+            * CoSEConstants.COMPLEX_MEM_MARGIN);
+  }
+  else
+  {
+    return new RectangleD(boundLeft, boundTop, boundRight - boundLeft,
+            boundBottom - boundTop);
+  }
+};
+
+/**
+* Recursively calculate if the node or its child nodes have any edges to
+* other nodes. Return the total number of edges.
+*/
+CoSELayout.prototype.calcGraphDegree = function(parentNode)
+{
+   var self = this;
+   var degree = 0;
+   if (parentNode.getChild() == null)
+   {
+       degree = parentNode.getEdges().length;
+       return degree;
+   }
+
+   parentNode.getChild().getNodes().forEach(function(o) {
+     degree = degree + parentNode.getEdges().length + self.calcGraphDegree(o);
+   });
+
+   return degree;
+};
 
 module.exports = CoSELayout;
