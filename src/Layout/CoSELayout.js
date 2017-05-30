@@ -14,6 +14,7 @@ var IGeometry = require('./IGeometry');
 var LGraph = require('./LGraph');
 var Transform = require('./Transform');
 var HashMap = require('./HashMap');
+var MemberPack = require('./MemberPack');
 
 function CoSELayout() {
   FDLayout.call(this);
@@ -472,11 +473,6 @@ CoSELayout.prototype.groupZeroDegreeMembers = function () {
   this.getGraphManager().getGraphs().forEach(function (ownerGraph) {
     var zeroDegreeNodes = [];
 
-    // do not process complex nodes (their members are already owned)
-    if (ownerGraph.getParent().type != null && ownerGraph.getParent().isComplex()) {
-      return;
-    }
-
     ownerGraph.getNodes().forEach(function (node) {
 
       if (self.calcGraphDegree(node) === 0)
@@ -529,7 +525,7 @@ CoSELayout.prototype.applyDFSOnComplexes = function ()
   var self = this;
   // LGraph>();
   this.getAllNodes().forEach(function (comp) {
-    if (!comp.isComplex || !comp.isComplex()) {
+    if (comp.getChild() == null) {
       return;
     }
 
@@ -558,7 +554,7 @@ CoSELayout.prototype.repopulateComplexes = function() {
   this.emptiedDummyComplexMap.keySet().forEach(function(comp){
     var chGr = this.emptiedDummyComplexMap.get(comp);
     comp.setChild(chGr);
-    this.getGraphManager().getGraphs().add(chGr);
+    this.getGraphManager().getGraphs().push(chGr);
   });
 
   for (var i = this.complexOrder.length - 1; i >= 0; i--)
@@ -573,7 +569,7 @@ CoSELayout.prototype.repopulateComplexes = function() {
       if (chGr != null)
       {
           // adjust the positions of the members
-          this.getGraphManager().getGraphs().add(chGr);
+          this.getGraphManager().getGraphs().push(chGr);
           
           var pack = this.memberPackMap.get(comp);
           pack.adjustLocations(comp.getLeft(), comp.getTop());
@@ -596,6 +592,7 @@ CoSELayout.prototype.repopulateComplexes = function() {
 };
 
 CoSELayout.prototype.clearComplex = function (comp) {
+  var self = this;
   var pack = null;
   var childGr = comp.getChild();
   this.childGraphMap.put(comp, childGr);
@@ -606,14 +603,20 @@ CoSELayout.prototype.clearComplex = function (comp) {
   pack = new MemberPack(childGr);
   this.memberPackMap.put(comp, pack);
 
-  if (this.dummyComplexList.contains(comp))
+  if (this.dummyComplexList.indexOf(comp) >= 0)
   {
     comp.getChild().getNodes().forEach(function (o) {
-      clearDummyComplexGraphs(o);
+      self.clearDummyComplexGraphs(o);
     });
   }
-
-  this.getGraphManager().getGraphs().remove(childGr);
+  
+  //  this.getGraphManager().getGraphs().remove(childGr);
+  var graphs = this.getGraphManager().getGraphs();
+  var index = graphs.indexOf(childGr);
+  if (index > -1) {
+    graphs.splice(index, 1);
+  }
+  
   comp.setChild(null);
 
   comp.setWidth(pack.getWidth());
@@ -624,19 +627,28 @@ CoSELayout.prototype.clearComplex = function (comp) {
   {
     childGr.getNodes().forEach(function (ch) {
       var chNd = ch;
-
-      chNd.getEdges().forEach(function (edge) {
+      
+      var edges = chNd.getEdges();
+      edges.forEach(function (edge) {
         if (edge.getSource() == chNd)
         {
-          chNd.getEdges().remove(edge);
+//          chNd.getEdges().remove(edge);
+          var index = edges.indexOf(edge);
+          if (index != -1) {
+            edges.splice(edge);
+          }
           edge.setSource(comp);
-          comp.getEdges().add(edge);
+          comp.getEdges().push(edge);
         }
         else if (edge.getTarget() == chNd)
         {
-          chNd.getEdges().remove(edge);
+//          chNd.getEdges().remove(edge);
+          var index = edges.indexOf(edge);
+          if (index != -1) {
+            edges.splice(edge);
+          }
           edge.setTarget(comp);
-          comp.getEdges().add(edge);
+          comp.getEdges().push(edge);
         }
       });
     });
@@ -657,14 +669,14 @@ CoSELayout.prototype.DFSVisitComplex = function (node)
     node.getChild().getNodes().forEach(function (sbgnChild) {
       self.DFSVisitComplex(sbgnChild);
     });
-  }
-
-  // TODO add node.containsUnmarkedComplex() if not exists
-  if (node.isComplex() && !node.containsUnmarkedComplex())
-  {
-    this.complexOrder.add(node);
-    node.visited = true;
-    return;
+    
+    // TODO revise
+    if (!node.containsUnmarkedComplex())
+    {
+      this.complexOrder.push(node);
+      node.visited = true;
+      return;
+    }
   }
 };
 
@@ -706,13 +718,14 @@ CoSELayout.prototype.adjustLocation = function (comp, chGr)
  */
 CoSELayout.prototype.clearDummyComplexGraphs = function (comp)
 {
+  var self = this;
   if (comp.getChild() == null || comp.isDummyCompound) {
     return;
   }
   
   comp.getChild().getNodes().forEach(function (childNode) {
     if (childNode.getChild() != null && childNode.getEdges().length == 0)
-      clearDummyComplexGraphs(childNode);
+      self.clearDummyComplexGraphs(childNode);
   });
 
   if (this.graphManager.getGraphs().contains(comp.getChild())) {

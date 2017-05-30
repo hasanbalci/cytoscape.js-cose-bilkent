@@ -28,6 +28,16 @@ LEdge.prototype.getTarget = function ()
   return this.target;
 };
 
+LEdge.prototype.setSource = function (source)
+{
+  this.source = source;
+};
+
+LEdge.prototype.setTarget = function (target)
+{
+  this.target = target;
+};
+
 LEdge.prototype.isInterGraph = function ()
 {
   return this.isInterGraph;

@@ -117,4 +117,25 @@ CoSENode.prototype.isProcessed = function ()
   return processed;
 };
 
+/**
+ * This method checks if the given node contains any unmarked complex nodes
+ * in its child graph.
+ * 
+ * @return true - if there are unmarked complex nodes false - otherwise
+ */
+CoSENode.prototype.containsUnmarkedComplex = function ()
+{
+  if (this.getChild() == null)
+    return false;
+  else
+  {
+    // TODO revise if child.getChild() != null check is needed
+    this.getChild().getNodes().forEach(function (child) {
+      if (child.getChild() != null && !child.visited)
+        return true;
+    });
+    return false;
+  }
+};
+
 module.exports = CoSENode;
