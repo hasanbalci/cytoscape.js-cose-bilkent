@@ -441,4 +441,270 @@ CoSELayout.prototype.calcRepulsionRange = function () {
   return (2 * (this.level + 1) * this.idealEdgeLength);
 };
 
+// Tiling methods
+
+// Group zero degree members whose parents are not to be tiled, create dummy parents where needed and fill memberGroups by their dummp parent id's
+CoSELayout.prototype.groupZeroDegreeMembers = function () {
+  // array of [parent_id x oneDegreeNode_id]
+  var tempMemberGroups = []; // A temporary map of parent node and its zero degree members
+  this.memberGroups = []; // A map of dummy parent node and its zero degree members whose parents are not to be tiled
+  this.idToDummyNode = {}; // A map of id to dummy node 
+  
+  var zeroDegree = []; // List of zero degree nodes whose parents are not to be tiled
+  var allNodes = this.graphManager.getAllNodes();
+
+  // Fill zero degree list
+  for (var i = 0; i < allNodes.length; i++) {
+    var node = allNodes[i];
+    var parent = node.getParent();
+    // If a node has zero degree and its parent is not to be tiled if exists add that node to zeroDegres list
+    if (this.getNodeDegreeWithChildren(node) === 0 && ( parent == null || !this.getToBeTiled(parent) ) ) {
+      zeroDegree.push(node);
+    }
+  }
+
+  // Create a map of parent node and its zero degree members
+  for (var i = 0; i < zeroDegree.length; i++)
+  {
+    var node = zeroDegree[i]; // Zero degree node itself
+    var p_id = node.getParent().id; // Parent id
+
+    if (typeof tempMemberGroups[p_id] === "undefined")
+      tempMemberGroups[p_id] = [];
+
+    tempMemberGroups[p_id] = tempMemberGroups[p_id].push(node); // Push node to the list belongs to its parent in tempMemberGroups
+  }
+
+  // If there are at least two nodes at a level, create a dummy compound for them
+  Object.keys(tempMemberGroups).forEach(function(p_id) {
+    if (tempMemberGroups[p_id].length > 1) {
+      var dummyCompoundId = "DummyCompound_" + p_id; // The id of dummy compound which will be created soon
+      this.memberGroups[dummyCompoundId] = tempMemberGroups[p_id]; // Add dummy compound to memberGroups
+
+      var parent = tempMemberGroups[p_id][0].getParent(); // The parent of zero degree nodes will be the parent of new dummy compound
+
+      // Create a dummy compound with calculated id
+      var dummyCompound = new CoSENode(null);
+      dummyCompound.id = dummyCompoundId;
+      
+      this.idToDummyNode[dummyCompoundId] = dummyCompound;
+
+      var dummyParentGraph = dummyCompound.getOwner();
+      var parentGraph = parent.getOwner();
+
+      // Add dummy compound to parent the graph
+      parent.getOwner().add(dummyCompound);
+
+      // For each zero degree node in this level remove it from its parent graph and add it to the graph of dummy parent
+      for (var i = 0; i < tempMemberGroups[p_id].length; i++) {
+        var node = tempMemberGroups[p_id][i];
+
+        parentGraph.remove(node);
+        dummyParentGraph.add(node);
+      }
+    }
+  });
+};
+
+CoSELayout.prototype.clearCompounds = function () {
+  var childGraphMap = [];
+  var idToNode = {};
+
+  // Get compound ordering by finding the inner one first
+  var compoundOrder = this.compoundOrder = this.performDFSOnCompounds();
+
+  for (var i = 0; i < compoundOrder.length; i++) {
+    
+    idToNode[compoundOrder[i].id] = compoundOrder[i];
+    childGraphMap[compoundOrder[i].id] = compoundOrder[i].getChild();
+
+    // Remove children of compounds
+    compoundOrder[i].child = null;
+  }
+
+  // Tile the removed children
+  this.tiledMemberPack = this.tileCompoundMembers(childGraphMap, idToNode);
+};
+
+CoSELayout.prototype.clearZeroDegreeMembers = function () {
+  var tiledZeroDegreePack = this.tiledZeroDegreePack = [];
+
+  Object.keys(memberGroups).forEach(function(id) {
+    var compoundNode = this.idToDummyNode[id]; // Get the dummy compound
+
+    tiledZeroDegreePack[id] = this.tileNodes(this.memberGroups[id]);
+
+    // Set the width and height of the dummy compound as calculated
+    compoundNode.rect.width = tiledZeroDegreePack[id].width;
+    compoundNode.rect.height = tiledZeroDegreePack[id].height;
+  });
+};
+
+CoSELayout.prototype.repopulateCompounds = function (tiledMemberPack) {
+  for (var i = this.compoundOrder.length - 1; i >= 0; i--) {
+    var lCompoundNode = this.compoundOrder[i];
+    var id = lCompoundNode.id;
+    // TODO revise here
+    var horizontalMargin = 5;//parseInt(instance.compoundOrder[i].css('padding-left'));
+    var verticalMargin = 5;//parseInt(instance.compoundOrder[i].css('padding-top'));
+
+    this.adjustLocations(tiledMemberPack[id], lCompoundNode.rect.x, lCompoundNode.rect.y, horizontalMargin, verticalMargin);
+  }
+};
+
+CoSELayout.prototype.repopulateZeroDegreeMembers = function () {
+  var tiledPack = this.tiledZeroDegreePack;
+  
+  Object.keys(tiledPack).forEach(function(id) {
+    var compoundNode = this.idToDummyNode[id]; // Get the dummy compound by its id
+    // TODO revise here
+    var horizontalMargin = 5;//parseInt(compound.css('padding-left'));
+    var verticalMargin = 5;//parseInt(compound.css('padding-top'));
+
+    // Adjust the positions of nodes wrt its compound
+    this.adjustLocations(tiledPack[id], compoundNode.rect.x, compoundNode.rect.y, horizontalMargin, verticalMargin);
+    
+    var dummyParentGraph = compoundNode.getChild();
+    var originalParentGraph = compoundNode.getParent().getChild(); // Note that the original parents of children of dummy is the current parent of dummy node
+    
+    var children = dummyParentGraph.getNodes();
+    
+    // Move the children of dummy compound to their original parent node
+    for (var i = 0; i < children.length; i++) {
+      var node = children[i];
+      dummyParentGraph.remove(node);
+      originalParentGraph.add(node);
+    }
+
+    // Remove the dummy compound
+    compoundNode.remove();
+  });
+};
+
+CoSELayout.prototype.getToBeTiled = function (node) {
+  var id = node.id;
+  //firstly check the previous results
+  if (this.toBeTiled[id] != null) {
+    return this.toBeTiled[id];
+  }
+
+  //only compound nodes are to be tiled
+  var childGraph = node.getChild();
+  if (childGraph == null) {
+    this.toBeTiled[id] = false;
+    return false;
+  }
+
+  var children = childGraph.getNodes(); // Get the children nodes
+
+  //a compound node is not to be tiled if all of its compound children are not to be tiled
+  for (var i = 0; i < children.length; i++) {
+    var theChild = children[i];
+
+    if (this.getNodeDegree(theChild) > 0) {
+      this.toBeTiled[id] = false;
+      return false;
+    }
+
+    //pass the children not having the compound structure
+    if (theChild.getChild() == null) {
+      this.toBeTiled[theChild.id] = false;
+      continue;
+    }
+
+    if (!this.getToBeTiled(theChild)) {
+      this.toBeTiled[id] = false;
+      return false;
+    }
+  }
+  this.toBeTiled[id] = true;
+  return true;
+};
+
+// Get degree of a node depending of its edges and independent of its children
+CoSELayout.prototype.getNodeDegree = function (node) {
+  var id = node.id();
+  var edges = node.getEdges();
+  var degree = 0;
+  
+  // For the edges connected
+  for (var i = 0; i < edges.length; i++) {
+    var edge = edges[i];
+    if (edge.getSource().id !== edge.getTarget().id) {
+      degree = degree + 1;
+    }
+  }
+  return degree;
+};
+
+// Get degree of a node with its children
+CoSELayout.prototype.getNodeDegreeWithChildren = function (node) {
+  var degree = this.getNodeDegree(node);
+  var children = node.getChild().getNodes();
+  for (var i = 0; i < children.length; i++) {
+    var child = children[i];
+    degree += this.getNodeDegreeWithChildren(child);
+  }
+  return degree;
+};
+
+CoSELayout.prototype.performDFSOnCompounds = function (options) {
+  this.compoundOrder = [];
+  this.fillCompexOrderByDFS(this.graphManager.getRoot().getNodes());
+};
+
+CoSELayout.prototype.fillCompexOrderByDFS = function (children) {
+  for (var i = 0; i < children.length; i++) {
+    var child = children[i];
+    this.fillCompexOrderByDFS(child.getChild().getNodes());
+    if (this.getToBeTiled(child)) {
+      this.compoundOrder.push(child);
+    }
+  }
+};
+
+/**
+* This method places each zero degree member wrt given (x,y) coordinates (top left).
+*/
+CoSELayout.prototype.adjustLocations = function (organization, x, y, compoundHorizontalMargin, compoundVerticalMargin) {
+  x += compoundHorizontalMargin;
+  y += compoundVerticalMargin;
+
+  var left = x;
+
+  for (var i = 0; i < organization.rows.length; i++) {
+    var row = organization.rows[i];
+    x = left;
+    var maxHeight = 0;
+
+    for (var j = 0; j < row.length; j++) {
+      var lnode = row[j];
+
+      lnode.rect.x = x;// + lnode.rect.width / 2;
+      lnode.rect.y = y;// + lnode.rect.height / 2;
+
+      x += lnode.rect.width + organization.horizontalPadding;
+
+      if (lnode.rect.height > maxHeight)
+        maxHeight = lnode.rect.height;
+    }
+
+    y += maxHeight + organization.verticalPadding;
+  }
+};
+
+CoSELayout.prototype.tileCompoundMembers = function (childGraphMap, idToNode) {
+  this.tiledMemberPack = [];
+
+  Object.keys(childGraphMap).forEach(function(id) {
+    // Get the compound node
+    var compoundNode = idToNode[id];
+
+    this.tiledMemberPack[id] = this.tileNodes(childGraphMap[id]);
+
+    compoundNode.rect.width = tiledMemberPack[id].width + 20;
+    compoundNode.rect.height = tiledMemberPack[id].height + 20;
+  });
+};
+
 module.exports = CoSELayout;
