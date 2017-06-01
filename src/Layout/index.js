@@ -29,7 +29,7 @@ var CoSEGraph = require('./CoSEGraph');
 var CoSEGraphManager = require('./CoSEGraphManager');
 var CoSELayout = require('./CoSELayout');
 var CoSENode = require('./CoSENode');
-var TilingExtension = require('./TilingExtension');
+//var TilingExtension = require('./TilingExtension');
 
 var defaults = {
   // Called on `layoutready`
@@ -93,7 +93,7 @@ function extend(defaults, options) {
 };
 
 function _CoSELayout(_options) {
-  TilingExtension(this); // Extend this instance with tiling functions
+//  TilingExtension(this); // Extend this instance with tiling functions
   this.options = extend(defaults, _options);
   getUserOptions(this.options);
 }
@@ -145,12 +145,12 @@ _CoSELayout.prototype.run = function () {
 
   this.root = gm.addRoot();
 
-  if (!this.options.tile) {
+//  if (!this.options.tile) {
     this.processChildrenList(this.root, this.getTopMostNodes(nodes), layout);
-  }
-  else {
-    this.preLayout();
-  }
+//  }
+//  else {
+//    this.preLayout();
+//  }
 
 
   for (var i = 0; i < edges.length; i++) {
@@ -200,9 +200,9 @@ _CoSELayout.prototype.run = function () {
     
     // If layout is done
     if (isDone) {
-      if (self.options.tile) {
-        self.postLayout();
-      }
+//      if (self.options.tile) {
+//        self.postLayout();
+//      }
       self.options.eles.nodes().positions(getPositions);
       
       afterReposition();
@@ -269,9 +269,9 @@ _CoSELayout.prototype.run = function () {
    */
   if(this.options.animate !== 'during'){
     setTimeout(function() {
-      if (self.options.tile) {
-        self.postLayout();
-      }
+//      if (self.options.tile) {
+//        self.postLayout();
+//      }
       self.options.eles.nodes().not(":parent").layoutPositions(self, self.options, getPositions); // Use layout positions to reposition the nodes it considers the options parameter
       self.options.eles.nodes().removeScratch('coseBilkent');
       ready = false;
