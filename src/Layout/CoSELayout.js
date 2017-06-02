@@ -501,7 +501,7 @@ CoSELayout.prototype.groupZeroDegreeMembers = function () {
       self.idToDummyNode[dummyCompoundId] = dummyCompound;
       
       // TODO revise if we need to add nodes to dummy parent
-//      var dummyParentGraph = dummyCompound.getOwner();
+      var dummyParentGraph = self.getGraphManager().add(self.newGraph(), dummyCompound);
       var parentGraph = parent.getChild();
 
       // Add dummy compound to parent the graph
@@ -513,18 +513,11 @@ CoSELayout.prototype.groupZeroDegreeMembers = function () {
         
         node.originalOwner = node.getOwner();
         parentGraph.remove(node);
-        node.owner = null;
-//        dummyParentGraph.add(node);
+        dummyParentGraph.add(node);
+//        node.owner = null;
       }
     }
   });
-  
-//  this.getGraphManager().updateBounds();
-//
-//  this.graphManager.resetAllNodes();
-//  this.graphManager.resetAllNodesToApplyGravitation();
-//  this.graphManager.resetAllEdges();
-//  this.calculateNodesToApplyGravitationTo();
 };
 
 CoSELayout.prototype.clearCompounds = function () {
@@ -540,9 +533,12 @@ CoSELayout.prototype.clearCompounds = function () {
     childGraphMap[this.compoundOrder[i].id] = this.compoundOrder[i].getChild().getNodes();
 
     // Remove children of compounds
+    this.graphManager.remove(this.compoundOrder[i].getChild());
     this.compoundOrder[i].child = null;
   }
-
+  
+  this.graphManager.resetAllNodes();
+  
   // Tile the removed children
   this.tileCompoundMembers(childGraphMap, idToNode);
 };

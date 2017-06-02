@@ -1,4 +1,8 @@
+var LGraph;
+var LEdge = require('./LEdge');
+
 function LGraphManager(layout) {
+  LGraph = require('./LGraph');
   this.layout = layout;
 
   this.graphs = [];
