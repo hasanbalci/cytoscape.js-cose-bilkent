@@ -89,7 +89,11 @@ CoSELayout.prototype.layout = function () {
   }
 
   this.level = 0;
-  return this.classicLayout();
+  var res = this.classicLayout();
+  
+  this.repopulateZeroDegreeMembers();
+  this.repopulateCompounds();
+  return res;
 };
 
 CoSELayout.prototype.classicLayout = function () {
@@ -571,16 +575,17 @@ CoSELayout.prototype.repopulateCompounds = function (tiledMemberPack) {
 };
 
 CoSELayout.prototype.repopulateZeroDegreeMembers = function () {
+  var self = this;
   var tiledPack = this.tiledZeroDegreePack;
   
   Object.keys(tiledPack).forEach(function(id) {
-    var compoundNode = this.idToDummyNode[id]; // Get the dummy compound by its id
+    var compoundNode = self.idToDummyNode[id]; // Get the dummy compound by its id
     // TODO revise here
     var horizontalMargin = 5;//parseInt(compound.css('padding-left'));
     var verticalMargin = 5;//parseInt(compound.css('padding-top'));
 
     // Adjust the positions of nodes wrt its compound
-    this.adjustLocations(tiledPack[id], compoundNode.rect.x, compoundNode.rect.y, horizontalMargin, verticalMargin);
+    self.adjustLocations(tiledPack[id], compoundNode.rect.x, compoundNode.rect.y, horizontalMargin, verticalMargin);
     
     // TODO revise if we need to remove the nodes from dummy parents
 //    var dummyParentGraph = compoundNode.getChild();
