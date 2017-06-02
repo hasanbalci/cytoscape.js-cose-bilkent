@@ -525,7 +525,7 @@ CoSELayout.prototype.groupZeroDegreeMembers = function () {
 };
 
 CoSELayout.prototype.clearCompounds = function () {
-  var childGraphMap = [];
+  var childGraphMap = this.childGraphMap = {};
   var idToNode = {};
 
   // Get compound ordering by finding the inner one first
@@ -534,7 +534,7 @@ CoSELayout.prototype.clearCompounds = function () {
   for (var i = 0; i < this.compoundOrder.length; i++) {
     
     idToNode[this.compoundOrder[i].id] = this.compoundOrder[i];
-    childGraphMap[this.compoundOrder[i].id] = this.compoundOrder[i].getChild().getNodes();
+    childGraphMap[this.compoundOrder[i].id] = [].concat(this.compoundOrder[i].getChild().getNodes());
 
     // Remove children of compounds
     this.graphManager.remove(this.compoundOrder[i].getChild());
@@ -562,7 +562,7 @@ CoSELayout.prototype.clearZeroDegreeMembers = function () {
   });
 };
 
-CoSELayout.prototype.repopulateCompounds = function (tiledMemberPack) {
+CoSELayout.prototype.repopulateCompounds = function () {
   for (var i = this.compoundOrder.length - 1; i >= 0; i--) {
     var lCompoundNode = this.compoundOrder[i];
     var id = lCompoundNode.id;
@@ -570,7 +570,7 @@ CoSELayout.prototype.repopulateCompounds = function (tiledMemberPack) {
     var horizontalMargin = 5;//parseInt(instance.compoundOrder[i].css('padding-left'));
     var verticalMargin = 5;//parseInt(instance.compoundOrder[i].css('padding-top'));
 
-    this.adjustLocations(tiledMemberPack[id], lCompoundNode.rect.x, lCompoundNode.rect.y, horizontalMargin, verticalMargin);
+    this.adjustLocations(this.tiledMemberPack[id], lCompoundNode.rect.x, lCompoundNode.rect.y, horizontalMargin, verticalMargin);
   }
 };
 
@@ -592,7 +592,7 @@ CoSELayout.prototype.repopulateZeroDegreeMembers = function () {
     var originalParentGraph = compoundNode.getParent().getChild(); // Note that the original parents of children of dummy is the current parent of dummy node
     
 //    var children = dummyParentGraph.getNodes();
-    var children = compoundNode.getChild().getNodes();
+    var children = self.childGraphMap[id];
     // Move the children of dummy compound to their original parent node
     for (var i = 0; i < children.length; i++) {
       var node = children[i];
