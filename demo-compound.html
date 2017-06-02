@@ -51,7 +51,8 @@
           container: document.getElementById('cy'),
 
           layout: {
-            name: 'cose-bilkent'
+            name: 'cose-bilkent',
+            animate: 'during'
           },
 
           style: [
@@ -78,7 +79,7 @@
             }
           ],
 
-          elements: [{group: 'nodes', data: {id: 'a'}}, {group: 'nodes', data: {id: 'x'}}, {group: 'nodes', data: {id: 'b', parent: 'a'}}, {group: 'nodes', data: {id: 'c', parent: 'a'}}/*, {group: 'edges', data: {source: 'c', target: 'b'}}*/]
+          elements: [{group: 'nodes', data: {id: 'a'}}, {group: 'nodes', data: {id: 'x'}}, {group: 'nodes', data: {id: 'y'}}, {group: 'nodes', data: {id: 'z', parent: 'a'}}, {group: 'nodes', data: {id: 'b', parent: 'a'}}, {group: 'nodes', data: {id: 'c', parent: 'a'}}/*, {group: 'edges', data: {source: 'c', target: 'b'}}*/]
         });
 
       });

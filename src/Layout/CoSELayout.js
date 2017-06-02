@@ -525,7 +525,7 @@ CoSELayout.prototype.groupZeroDegreeMembers = function () {
 };
 
 CoSELayout.prototype.clearCompounds = function () {
-  var childGraphMap = this.childGraphMap = {};
+  var childGraphMap = {};
   var idToNode = {};
 
   // Get compound ordering by finding the inner one first
@@ -586,22 +586,6 @@ CoSELayout.prototype.repopulateZeroDegreeMembers = function () {
 
     // Adjust the positions of nodes wrt its compound
     self.adjustLocations(tiledPack[id], compoundNode.rect.x, compoundNode.rect.y, horizontalMargin, verticalMargin);
-    
-    // TODO revise if we need to remove the nodes from dummy parents
-//    var dummyParentGraph = compoundNode.getChild();
-    var originalParentGraph = compoundNode.getParent().getChild(); // Note that the original parents of children of dummy is the current parent of dummy node
-    
-//    var children = dummyParentGraph.getNodes();
-    var children = self.childGraphMap[id];
-    // Move the children of dummy compound to their original parent node
-    for (var i = 0; i < children.length; i++) {
-      var node = children[i];
-//      dummyParentGraph.remove(node);
-      originalParentGraph.add(node);
-    }
-
-    // Remove the dummy compound
-    originalParentGraph.remove(compoundNode);
   });
 };
 

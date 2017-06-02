@@ -222,25 +222,21 @@ _CoSELayout.prototype.run = function () {
     }
     
     var animationData = self.layout.getPositionsData(); // Get positions of layout nodes note that all nodes may not be layout nodes because of tiling
-    // Position nodes, for the nodes who are not passed to layout because of tiling return the position of their dummy compound
+    
+    // Position nodes, for the nodes whose id does not included in data (because they are removed from their parents and included in dummy compounds)
+    // use position of their ancestors or dummy ancestors
     options.eles.nodes().positions(function (ele, i) {
       if (typeof ele === "number") {
         ele = i;
       }
-      if (ele.scratch('coseBilkent') && ele.scratch('coseBilkent').dummy_parent_id) {
-        var dummyParent = ele.scratch('coseBilkent').dummy_parent_id;
-        return {
-          x: dummyParent.x,
-          y: dummyParent.y
-        };
-      }
-      var theId = ele.data('id');
+      var theId = ele.id();
       var pNode = animationData[theId];
       var temp = ele;
+      // If pNode is undefined search until finding position data of its first ancestor (It may be dummy as well)
       while (pNode == null) {
-        temp = temp.parent()[0];
-        pNode = animationData[temp.id()];
+        pNode = animationData[temp.data('parent')] || animationData['DummyCompound_' + temp.data('parent')];
         animationData[theId] = pNode;
+        temp = temp.parent()[0];
       }
       return {
         x: pNode.x,
