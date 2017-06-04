@@ -319,7 +319,14 @@ _CoSELayout.prototype.processChildrenList = function (parent, children, layout) 
     else {
       theNode = parent.add(new CoSENode(this.graphManager));
     }
+    // Attach id to the layout node
     theNode.id = theChild.data("id");
+    // Attach the paddings of cy node to layout node
+    theNode.paddingLeft = parseInt( theChild.css('padding-left') );
+    theNode.paddingTop = parseInt( theChild.css('padding-top') );
+    theNode.paddingRight = parseInt( theChild.css('padding-right') );
+    theNode.paddingBottom = parseInt( theChild.css('padding-bottom') );
+    // Map the layout node
     this.idToLNode[theChild.data("id")] = theNode;
 
     if (isNaN(theNode.rect.x)) {

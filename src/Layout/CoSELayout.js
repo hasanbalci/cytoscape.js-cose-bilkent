@@ -493,7 +493,6 @@ CoSELayout.prototype.groupZeroDegreeMembers = function () {
   Object.keys(tempMemberGroups).forEach(function(p_id) {
     if (tempMemberGroups[p_id].length > 1) {
       var dummyCompoundId = "DummyCompound_" + p_id; // The id of dummy compound which will be created soon
-      console.log(dummyCompoundId);
       self.memberGroups[dummyCompoundId] = tempMemberGroups[p_id]; // Add dummy compound to memberGroups
 
       var parent = tempMemberGroups[p_id][0].getParent(); // The parent of zero degree nodes will be the parent of new dummy compound
@@ -501,6 +500,10 @@ CoSELayout.prototype.groupZeroDegreeMembers = function () {
       // Create a dummy compound with calculated id
       var dummyCompound = new CoSENode(self.graphManager);
       dummyCompound.id = dummyCompoundId;
+      dummyCompound.paddingLeft = parent.paddingLeft || 0;
+      dummyCompound.paddingRight = parent.paddingRight || 0;
+      dummyCompound.paddingBottom = parent.paddingBottom || 0;
+      dummyCompound.paddingTop = parent.paddingTop || 0;
       
       self.idToDummyNode[dummyCompoundId] = dummyCompound;
       
@@ -554,7 +557,7 @@ CoSELayout.prototype.clearZeroDegreeMembers = function () {
   Object.keys(this.memberGroups).forEach(function(id) {
     var compoundNode = self.idToDummyNode[id]; // Get the dummy compound
 
-    tiledZeroDegreePack[id] = self.tileNodes(self.memberGroups[id]);
+    tiledZeroDegreePack[id] = self.tileNodes(self.memberGroups[id], compoundNode.paddingLeft + compoundNode.paddingRight);
 
     // Set the width and height of the dummy compound as calculated
     compoundNode.rect.width = tiledZeroDegreePack[id].width;
@@ -566,9 +569,8 @@ CoSELayout.prototype.repopulateCompounds = function () {
   for (var i = this.compoundOrder.length - 1; i >= 0; i--) {
     var lCompoundNode = this.compoundOrder[i];
     var id = lCompoundNode.id;
-    // TODO revise here
-    var horizontalMargin = 5;//parseInt(instance.compoundOrder[i].css('padding-left'));
-    var verticalMargin = 5;//parseInt(instance.compoundOrder[i].css('padding-top'));
+    var horizontalMargin = lCompoundNode.paddingLeft;
+    var verticalMargin = lCompoundNode.paddingTop;
 
     this.adjustLocations(this.tiledMemberPack[id], lCompoundNode.rect.x, lCompoundNode.rect.y, horizontalMargin, verticalMargin);
   }
@@ -580,9 +582,8 @@ CoSELayout.prototype.repopulateZeroDegreeMembers = function () {
   
   Object.keys(tiledPack).forEach(function(id) {
     var compoundNode = self.idToDummyNode[id]; // Get the dummy compound by its id
-    // TODO revise here
-    var horizontalMargin = 5;//parseInt(compound.css('padding-left'));
-    var verticalMargin = 5;//parseInt(compound.css('padding-top'));
+    var horizontalMargin = compoundNode.paddingLeft;
+    var verticalMargin = compoundNode.paddingTop;
 
     // Adjust the positions of nodes wrt its compound
     self.adjustLocations(tiledPack[id], compoundNode.rect.x, compoundNode.rect.y, horizontalMargin, verticalMargin);
@@ -714,17 +715,17 @@ CoSELayout.prototype.tileCompoundMembers = function (childGraphMap, idToNode) {
     // Get the compound node
     var compoundNode = idToNode[id];
 
-    self.tiledMemberPack[id] = self.tileNodes(childGraphMap[id]);
+    self.tiledMemberPack[id] = self.tileNodes(childGraphMap[id], compoundNode.paddingLeft + compoundNode.paddingRight);
 
     compoundNode.rect.width = self.tiledMemberPack[id].width + 20;
     compoundNode.rect.height = self.tiledMemberPack[id].height + 20;
   });
 };
 
-CoSELayout.prototype.tileNodes = function (nodes) {
+CoSELayout.prototype.tileNodes = function (nodes, minWidth) {
   // TODO revise
-  var verticalPadding = 5;//typeof self.options.tilingPaddingVertical === 'function' ? self.options.tilingPaddingVertical.call() : self.options.tilingPaddingVertical;
-  var horizontalPadding = 5;//typeof self.options.tilingPaddingHorizontal === 'function' ? self.options.tilingPaddingHorizontal.call() : self.options.tilingPaddingHorizontal;
+  var verticalPadding = 20;//typeof self.options.tilingPaddingVertical === 'function' ? self.options.tilingPaddingVertical.call() : self.options.tilingPaddingVertical;
+  var horizontalPadding = 20;//typeof self.options.tilingPaddingHorizontal === 'function' ? self.options.tilingPaddingHorizontal.call() : self.options.tilingPaddingHorizontal;
   var organization = {
     rows: [],
     rowWidth: [],
@@ -734,17 +735,6 @@ CoSELayout.prototype.tileNodes = function (nodes) {
     verticalPadding: verticalPadding,
     horizontalPadding: horizontalPadding
   };
-
-  // TODO revise if we need to remove zero degree members from their dummy parents here
-//    for (var i = 0; i < nodes.length; i++) {
-//      if (!node.scratch('coseBilkent') || !node.scratch('coseBilkent').dummy_parent_id) {
-//        var owner = lNode.owner;
-//        owner.remove(lNode);
-//
-//        instance.gm.resetAllNodes();
-//        instance.gm.getAllNodes();
-//      }
-//    }
 
   // Sort the nodes in ascending order of their areas
   nodes.sort(function (n1, n2) {
@@ -758,10 +748,7 @@ CoSELayout.prototype.tileNodes = function (nodes) {
   // Create the organization -> tile members
   for (var i = 0; i < nodes.length; i++) {
     var lNode = nodes[i];
-
-    // TODO revise
-    var minWidth = 5 + 5;//parseInt(cyNode.css('padding-left')) + parseInt(cyNode.css('padding-right'));
-
+    
     if (organization.rows.length == 0) {
       this.insertNodeToRow(organization, lNode, 0, minWidth);
     }
