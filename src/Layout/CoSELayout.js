@@ -74,12 +74,14 @@ CoSELayout.prototype.initParameters = function () {
 };
 
 CoSELayout.prototype.layout = function () {
-  // Find zero degree nodes and create a compound for each level
-  this.groupZeroDegreeMembers();
-  // Tile and clear children of each compound
-  this.clearCompounds();
-  // Separately tile and clear zero degree nodes for each level
-  this.clearZeroDegreeMembers();
+  if (CoSEConstants.TILE) {
+    // Find zero degree nodes and create a compound for each level
+    this.groupZeroDegreeMembers();
+    // Tile and clear children of each compound
+    this.clearCompounds();
+    // Separately tile and clear zero degree nodes for each level
+    this.clearZeroDegreeMembers();
+  }
   
   var createBendsAsNeeded = LayoutConstants.DEFAULT_CREATE_BENDS_AS_NEEDED;
   if (createBendsAsNeeded)
@@ -91,8 +93,11 @@ CoSELayout.prototype.layout = function () {
   this.level = 0;
   var res = this.classicLayout();
   
-  this.repopulateZeroDegreeMembers();
-  this.repopulateCompounds();
+  if (CoSEConstants.TILE) {
+    this.repopulateZeroDegreeMembers();
+    this.repopulateCompounds();
+  }
+  
   return res;
 };
 
@@ -507,7 +512,6 @@ CoSELayout.prototype.groupZeroDegreeMembers = function () {
       
       self.idToDummyNode[dummyCompoundId] = dummyCompound;
       
-      // TODO revise if we need to add nodes to dummy parent
       var dummyParentGraph = self.getGraphManager().add(self.newGraph(), dummyCompound);
       var parentGraph = parent.getChild();
 
@@ -518,10 +522,8 @@ CoSELayout.prototype.groupZeroDegreeMembers = function () {
       for (var i = 0; i < tempMemberGroups[p_id].length; i++) {
         var node = tempMemberGroups[p_id][i];
         
-        node.originalOwner = node.getOwner();
         parentGraph.remove(node);
         dummyParentGraph.add(node);
-//        node.owner = null;
       }
     }
   });
@@ -723,9 +725,8 @@ CoSELayout.prototype.tileCompoundMembers = function (childGraphMap, idToNode) {
 };
 
 CoSELayout.prototype.tileNodes = function (nodes, minWidth) {
-  // TODO revise
-  var verticalPadding = 20;//typeof self.options.tilingPaddingVertical === 'function' ? self.options.tilingPaddingVertical.call() : self.options.tilingPaddingVertical;
-  var horizontalPadding = 20;//typeof self.options.tilingPaddingHorizontal === 'function' ? self.options.tilingPaddingHorizontal.call() : self.options.tilingPaddingHorizontal;
+  var verticalPadding = CoSEConstants.TILING_PADDING_VERTICAL;
+  var horizontalPadding = CoSEConstants.TILING_PADDING_HORIZONTAL;
   var organization = {
     rows: [],
     rowWidth: [],

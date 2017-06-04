@@ -123,6 +123,11 @@ var getUserOptions = function (options) {
   CoSEConstants.DEFAULT_INCREMENTAL = FDLayoutConstants.DEFAULT_INCREMENTAL = LayoutConstants.DEFAULT_INCREMENTAL =
           !(options.randomize);
   CoSEConstants.ANIMATE = FDLayoutConstants.ANIMATE = options.animate;
+  CoSEConstants.TILE = options.tile;
+  CoSEConstants.TILING_PADDING_VERTICAL = 
+          typeof options.tilingPaddingVertical === 'function' ? options.tilingPaddingVertical.call() : options.tilingPaddingVertical;
+  CoSEConstants.TILING_PADDING_HORIZONTAL = 
+          typeof options.tilingPaddingHorizontal === 'function' ? options.tilingPaddingHorizontal.call() : options.tilingPaddingHorizontal;
 };
 
 _CoSELayout.prototype.run = function () {
