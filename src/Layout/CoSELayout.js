@@ -74,15 +74,6 @@ CoSELayout.prototype.initParameters = function () {
 };
 
 CoSELayout.prototype.layout = function () {
-  if (CoSEConstants.TILE) {
-    // Find zero degree nodes and create a compound for each level
-    this.groupZeroDegreeMembers();
-    // Tile and clear children of each compound
-    this.clearCompounds();
-    // Separately tile and clear zero degree nodes for each level
-    this.clearZeroDegreeMembers();
-  }
-  
   var createBendsAsNeeded = LayoutConstants.DEFAULT_CREATE_BENDS_AS_NEEDED;
   if (createBendsAsNeeded)
   {
@@ -91,14 +82,7 @@ CoSELayout.prototype.layout = function () {
   }
 
   this.level = 0;
-  var res = this.classicLayout();
-  
-  if (CoSEConstants.TILE) {
-    this.repopulateZeroDegreeMembers();
-    this.repopulateCompounds();
-  }
-  
-  return res;
+  return this.classicLayout();
 };
 
 CoSELayout.prototype.classicLayout = function () {
@@ -929,7 +913,25 @@ CoSELayout.prototype.shiftToLastRow = function (organization) {
     var finalTotal = organization.rowHeight[longest] + organization.rowHeight[last];
     organization.height += (finalTotal - prevTotal);
 
-    instance.shiftToLastRow(organization);
+    this.shiftToLastRow(organization);
+  }
+};
+
+CoSELayout.prototype.tilingPreLayout = function() {
+  if (CoSEConstants.TILE) {
+    // Find zero degree nodes and create a compound for each level
+    this.groupZeroDegreeMembers();
+    // Tile and clear children of each compound
+    this.clearCompounds();
+    // Separately tile and clear zero degree nodes for each level
+    this.clearZeroDegreeMembers();
+  }
+};
+
+CoSELayout.prototype.tilingPostLayout = function() {
+  if (CoSEConstants.TILE) {
+    this.repopulateZeroDegreeMembers();
+    this.repopulateCompounds();
   }
 };
 
