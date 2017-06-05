@@ -466,7 +466,7 @@ CoSELayout.prototype.groupZeroDegreeMembers = function () {
   var self = this;
   // array of [parent_id x oneDegreeNode_id]
   var tempMemberGroups = {}; // A temporary map of parent node and its zero degree members
-  this.memberGroups = []; // A map of dummy parent node and its zero degree members whose parents are not to be tiled
+  this.memberGroups = {}; // A map of dummy parent node and its zero degree members whose parents are not to be tiled
   this.idToDummyNode = {}; // A map of id to dummy node 
   
   var zeroDegree = []; // List of zero degree nodes whose parents are not to be tiled
