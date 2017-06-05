@@ -317,7 +317,7 @@ _CoSELayout.prototype.processChildrenList = function (parent, children, layout) 
     if (theChild.width() != null
             && theChild.height() != null) {
       theNode = parent.add(new CoSENode(layout.graphManager,
-              new PointD(theChild.position('x'), theChild.position('y')),
+              new PointD(theChild.position('x') - theChild.width() / 2, theChild.position('y') - theChild.height() / 2),
               new DimensionD(parseFloat(theChild.width()),
                       parseFloat(theChild.height()))));
     }
