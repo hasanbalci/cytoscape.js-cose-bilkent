@@ -51,6 +51,17 @@ CoSENode.prototype.move = function ()
 
   layout.totalDisplacement +=
           Math.abs(this.displacementX) + Math.abs(this.displacementY);
+  
+  var nodeData = {
+    springForceX: this.springForceX,
+    springForceY: this.springForceY,
+    repulsionForceX: this.repulsionForceX,
+    repulsionForceY: this.repulsionForceY,
+    gravitationForceX: this.gravitationForceX,
+    gravitationForceY: this.gravitationForceY,
+    displacementX: this.displacementX,
+    displacementY: this.displacementY
+  };
 
   this.springForceX = 0;
   this.springForceY = 0;
@@ -60,6 +71,8 @@ CoSENode.prototype.move = function ()
   this.gravitationForceY = 0;
   this.displacementX = 0;
   this.displacementY = 0;
+  
+  return nodeData;
 };
 
 CoSENode.prototype.propogateDisplacementToChildren = function (dX, dY)
