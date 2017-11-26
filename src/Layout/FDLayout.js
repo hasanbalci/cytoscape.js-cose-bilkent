@@ -124,13 +124,15 @@ FDLayout.prototype.initSpringEmbedder = function () {
 FDLayout.prototype.calcSpringForces = function () {
   var lEdges = this.getAllEdges();
   var edge;
+  var edgesData = [];
 
   for (var i = 0; i < lEdges.length; i++)
   {
     edge = lEdges[i];
 
-    this.calcSpringForce(edge, edge.idealLength);
+    edgesData[i] = this.calcSpringForce(edge, edge.idealLength);
   }
+  return edgesData;
 };
 
 FDLayout.prototype.calcRepulsionForces = function () {
@@ -192,19 +194,22 @@ FDLayout.prototype.calcGravitationalForces = function () {
 FDLayout.prototype.moveNodes = function () {
   var lNodes = this.getAllNodes();
   var node;
-
+  var nodesData = [];
   for (var i = 0; i < lNodes.length; i++)
   {
     node = lNodes[i];
-    node.move();
+    nodesData[i] = node.move();
   }
-}
+  return nodesData;
+};
 
 FDLayout.prototype.calcSpringForce = function (edge, idealLength) {
   var sourceNode = edge.getSource();
   var targetNode = edge.getTarget();
 
   var length;
+  var xLength;
+  var yLength;
   var springForce;
   var springForceX;
   var springForceY;
@@ -226,6 +231,8 @@ FDLayout.prototype.calcSpringForce = function (edge, idealLength) {
   }
 
   length = edge.getLength();
+  xLength = edge.lengthX;
+  yLength = edge.lengthY;
 
   // Calculate spring forces
   springForce = this.springConstant * (length - idealLength);
@@ -233,12 +240,22 @@ FDLayout.prototype.calcSpringForce = function (edge, idealLength) {
   // Project force onto x and y axes
   springForceX = springForce * (edge.lengthX / length);
   springForceY = springForce * (edge.lengthY / length);
-
+  
   // Apply forces on the end nodes
   sourceNode.springForceX += springForceX;
   sourceNode.springForceY += springForceY;
   targetNode.springForceX -= springForceX;
   targetNode.springForceY -= springForceY;
+  
+  var edgeData = {
+    source: sourceNode,
+    target: targetNode,
+    length: length,
+    xLength: xLength,
+    yLength: yLength
+  };
+  
+  return edgeData;
 };
 
 FDLayout.prototype.calcRepulsionForce = function (nodeA, nodeB) {

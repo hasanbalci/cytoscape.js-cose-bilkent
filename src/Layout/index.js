@@ -65,6 +65,8 @@ var defaults = {
   animate: 'end',
   // Duration for animate:end
   animationDuration: 500,
+  //whether to show iterations during animation
+  showAnimation: false, 
   // Represents the amount of the vertical space to put between the zero degree members during the tiling operation(can also be a function)
   tilingPaddingVertical: 10,
   // Represents the amount of the horizontal space to put between the zero degree members during the tiling operation(can also be a function)
@@ -233,39 +235,43 @@ _CoSELayout.prototype.run = function () {
     }
     
     var animationData = self.layout.getPositionsData(); // Get positions of layout nodes note that all nodes may not be layout nodes because of tiling
+    var edgeData = self.layout.getEdgesData();
+    var event = new CustomEvent('send', {'detail': [animationData, edgeData]});
+    window.dispatchEvent(event); 
     
-    // Position nodes, for the nodes whose id does not included in data (because they are removed from their parents and included in dummy compounds)
-    // use position of their ancestors or dummy ancestors
-    options.eles.nodes().positions(function (ele, i) {
-      if (typeof ele === "number") {
-        ele = i;
-      }
-      var theId = ele.id();
-      var pNode = animationData[theId];
-      var temp = ele;
-      // If pNode is undefined search until finding position data of its first ancestor (It may be dummy as well)
-      while (pNode == null) {
-        pNode = animationData[temp.data('parent')] || animationData['DummyCompound_' + temp.data('parent')];
-        animationData[theId] = pNode;
-        temp = temp.parent()[0];
-        if(temp == undefined){
-          break;
+    if(options.showAnimation){
+      // Position nodes, for the nodes whose id does not included in data (because they are removed from their parents and included in dummy compounds)
+      // use position of their ancestors or dummy ancestors
+      options.eles.nodes().positions(function (ele, i) {
+        if (typeof ele === "number") {
+          ele = i;
         }
-      }
-      if(pNode != null){
-        return {
-          x: pNode.x,
-          y: pNode.y
-        };
-      }
-      else{
-        return {
-          x: ele.x,
-          y: ele.y
-        };
-      }
-    });
-
+        var theId = ele.id();
+        var pNode = animationData[theId];
+        var temp = ele;
+        // If pNode is undefined search until finding position data of its first ancestor (It may be dummy as well)
+        while (pNode == null) {
+          pNode = animationData[temp.data('parent')] || animationData['DummyCompound_' + temp.data('parent')];
+          animationData[theId] = pNode;
+          temp = temp.parent()[0];
+          if(temp == undefined){
+            break;
+          }
+        }
+        if(pNode != null){
+          return {
+            x: pNode.x,
+            y: pNode.y
+          };
+        }
+        else{
+          return {
+            x: ele.x,
+            y: ele.y
+          };
+        }
+      });
+    }
     afterReposition();
 
     frameId = requestAnimationFrame(iterateAnimated);
@@ -323,15 +329,15 @@ _CoSELayout.prototype.processChildrenList = function (parent, children, layout) 
     var children_of_children = theChild.children();
     var theNode;    
 
-    var dimensions = theChild.layoutDimensions({
-      nodeDimensionsIncludeLabels: this.options.nodeDimensionsIncludeLabels
-    });
+//    var dimensions = theChild.layoutDimensions({
+//      nodeDimensionsIncludeLabels: this.options.nodeDimensionsIncludeLabels
+//    });
 
     if (theChild.outerWidth() != null
             && theChild.outerHeight() != null) {
       theNode = parent.add(new CoSENode(layout.graphManager,
-              new PointD(theChild.position('x') - dimensions.w / 2, theChild.position('y') - dimensions.h / 2),
-              new DimensionD(parseFloat(dimensions.w), parseFloat(dimensions.h))));
+              new PointD(theChild.position('x') - theChild.outerWidth() / 2, theChild.position('y') - theChild.outerHeight() / 2),
+              new DimensionD(parseFloat(theChild.outerWidth()), parseFloat(theChild.outerHeight()))));
     }
     else {
       theNode = parent.add(new CoSENode(this.graphManager));

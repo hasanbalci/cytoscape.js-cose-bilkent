@@ -124,6 +124,9 @@ CoSELayout.prototype.classicLayout = function () {
   return true;
 };
 
+var nodesDetail;
+var edgesDetail;
+
 CoSELayout.prototype.tick = function() {
   this.totalIterations++;
   
@@ -192,10 +195,10 @@ CoSELayout.prototype.tick = function() {
   
   this.totalDisplacement = 0;
   this.graphManager.updateBounds();
-  this.calcSpringForces();
+  edgesDetail = this.calcSpringForces();
   this.calcRepulsionForces();
   this.calcGravitationalForces();
-  this.moveNodes();
+  nodesDetail = this.moveNodes();
   this.animate();
   
   return false; // Layout is not ended yet return false
@@ -212,11 +215,35 @@ CoSELayout.prototype.getPositionsData = function() {
       x: rect.getCenterX(),
       y: rect.getCenterY(),
       w: rect.width,
-      h: rect.height
+      h: rect.height,
+      springForceX: nodesDetail[i].springForceX,
+      springForceY: nodesDetail[i].springForceY,
+      repulsionForceX: nodesDetail[i].repulsionForceX,
+      repulsionForceY: nodesDetail[i].repulsionForceY,
+      gravitationForceX: nodesDetail[i].gravitationForceX,
+      gravitationForceY: nodesDetail[i].gravitationForceY,
+      displacementX: nodesDetail[i].displacementX,
+      displacementY: nodesDetail[i].displacementY
     };
   }
-  
   return pData;
+};
+
+CoSELayout.prototype.getEdgesData = function() {
+  var allEdges = this.graphManager.getAllEdges();
+  var eData = {};
+  for (var i = 0; i < allEdges.length; i++) {
+    var id = allEdges[i].id;
+    eData[id] = {
+      id: id,
+      source: (edgesDetail[i] != null) ? edgesDetail[i].source : "",
+      target: (edgesDetail[i] != null) ? edgesDetail[i].target : "",
+      length: (edgesDetail[i] != null) ? edgesDetail[i].length : "",
+      xLength: (edgesDetail[i] != null) ? edgesDetail[i].xLength : "",
+      yLength: (edgesDetail[i] != null) ? edgesDetail[i].yLength : ""
+    };
+  }
+  return eData;
 };
 
 CoSELayout.prototype.runSpringEmbedder = function () {
