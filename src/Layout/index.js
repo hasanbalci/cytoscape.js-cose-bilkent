@@ -266,8 +266,8 @@ _CoSELayout.prototype.run = function () {
         }
         else{
           return {
-            x: ele.x,
-            y: ele.y
+            x: ele.position("x"),
+            y: ele.position("y")
           };
         }
       });
