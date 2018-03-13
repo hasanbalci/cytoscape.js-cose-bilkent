@@ -4,17 +4,18 @@ cytoscape-cose-bilkent
 
 ## Description
 
-The CoSE layout for Cytoscape.js by the [i-Vis group](http://cs.bilkent.edu.tr/~ivis/) in Bilkent University. Please cite the following when using this layout:
+The CoSE layout for Cytoscape.js by the [i-Vis Lab](http://cs.bilkent.edu.tr/~ivis/) in Bilkent University. Please cite the following when using this layout:
 
 U. Dogrusoz, E. Giral, A. Cetintas, A. Civril, and E. Demir, "[A Layout Algorithm For Undirected Compound Graphs](http://www.sciencedirect.com/science/article/pii/S0020025508004799)", Information Sciences, 179, pp. 980-994, 2009.
 
 ## Demos
 
-Click [here](https://rawgit.com/cytoscape/cytoscape.js-cose-bilkent/unstable/demo.html) (simple) or [here](https://rawgit.com/cytoscape/cytoscape.js-cose-bilkent/unstable/demo-compound.html) (compound) for demos
+Click [here](https://rawgit.com/cytoscape/cytoscape.js-cose-bilkent/master/demo.html) (simple) or [here](https://rawgit.com/cytoscape/cytoscape.js-cose-bilkent/master/demo-compound.html) (compound) for demos
 
 ## Dependencies
 
  * Cytoscape.js ^2.4.0 || ^3.0.0
+ * Versions after 2.0.4 are not compatible with versions before Cytoscape.js 3.1.0
 
 
 ## Usage instructions
@@ -43,6 +44,7 @@ require(['cytoscape', 'cytoscape-cose-bilkent'], function( cytoscape, regCose ){
 
 Plain HTML/JS has the extension registered for you automatically, because no `require()` is needed.
 
+Please note that Cytoscape.js rendering option *styleEnabled* must be true, if layout is running in headless mode.
 
 ## API
 
@@ -93,7 +95,7 @@ var defaultOptions = {
   // Gravity range (constant)
   gravityRange: 3.8,
   // Initial cooling factor for incremental layout
-  initialEnergyOnIncremental:0.8
+  initialEnergyOnIncremental:0.5
 };
 ```
 

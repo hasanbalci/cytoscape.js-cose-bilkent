@@ -51,7 +51,7 @@ CoSENode.prototype.move = function ()
 
   layout.totalDisplacement +=
           Math.abs(this.displacementX) + Math.abs(this.displacementY);
-  
+
   var nodeData = {
     springForceX: this.springForceX,
     springForceY: this.springForceY,

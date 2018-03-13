@@ -66,7 +66,7 @@ var defaults = {
   // Duration for animate:end
   animationDuration: 500,
   //whether to show iterations during animation
-  showAnimation: false,  
+  showAnimation: false, 
   // Represents the amount of the vertical space to put between the zero degree members during the tiling operation(can also be a function)
   tilingPaddingVertical: 10,
   // Represents the amount of the horizontal space to put between the zero degree members during the tiling operation(can also be a function)
@@ -78,7 +78,7 @@ var defaults = {
   // Gravity range (constant)
   gravityRange: 3.8,
   // Initial cooling factor for incremental layout
-  initialEnergyOnIncremental: 0.8
+  initialEnergyOnIncremental: 0.5
 };
 
 function extend(defaults, options) {
@@ -141,6 +141,8 @@ _CoSELayout.prototype.run = function () {
   var layout = this.layout = new CoSELayout();
   var self = this;
   
+  self.stopped = false;
+
   this.cy = this.options.cy;
 
   this.cy.trigger({ type: 'layoutstart', layout: this });
@@ -159,8 +161,10 @@ _CoSELayout.prototype.run = function () {
     var edge = edges[i];
     var sourceNode = this.idToLNode[edge.data("source")];
     var targetNode = this.idToLNode[edge.data("target")];
-    var e1 = gm.add(layout.newEdge(), sourceNode, targetNode);
-    e1.id = edge.id();
+    if(sourceNode.getEdgesBetween(targetNode).length == 0){
+      var e1 = gm.add(layout.newEdge(), sourceNode, targetNode);
+      e1.id = edge.id();
+    }
   }
   
    var getPositions = function(ele, i){
@@ -197,7 +201,7 @@ _CoSELayout.prototype.run = function () {
     var isDone;
 
     for( var i = 0; i < ticksPerFrame && !isDone; i++ ){
-      isDone = self.layout.tick();
+      isDone = self.stopped || self.layout.tick();
     }
     
     // If layout is done
@@ -233,29 +237,41 @@ _CoSELayout.prototype.run = function () {
     var animationData = self.layout.getPositionsData(); // Get positions of layout nodes note that all nodes may not be layout nodes because of tiling
     var edgeData = self.layout.getEdgesData();
     var event = new CustomEvent('send', {'detail': [animationData, edgeData]});
-    window.dispatchEvent(event);    
+
+    window.dispatchEvent(event); 
     
     if(options.showAnimation){
-        // Position nodes, for the nodes whose id does not included in data (because they are removed from their parents and included in dummy compounds)
-        // use position of their ancestors or dummy ancestors
-        options.eles.nodes().positions(function (ele, i) {
-          if (typeof ele === "number") {
-            ele = i;
+      // Position nodes, for the nodes whose id does not included in data (because they are removed from their parents and included in dummy compounds)
+      // use position of their ancestors or dummy ancestors
+      options.eles.nodes().positions(function (ele, i) {
+        if (typeof ele === "number") {
+          ele = i;
+        }
+        var theId = ele.id();
+        var pNode = animationData[theId];
+        var temp = ele;
+        // If pNode is undefined search until finding position data of its first ancestor (It may be dummy as well)
+        while (pNode == null) {
+          pNode = animationData[temp.data('parent')] || animationData['DummyCompound_' + temp.data('parent')];
+          animationData[theId] = pNode;
+          temp = temp.parent()[0];
+          if(temp == undefined){
+            break;
           }
-          var theId = ele.id();
-          var pNode = animationData[theId];
-          var temp = ele;
-          // If pNode is undefined search until finding position data of its first ancestor (It may be dummy as well)
-          while (pNode == null) {
-            pNode = animationData[temp.data('parent')] || animationData['DummyCompound_' + temp.data('parent')];
-            animationData[theId] = pNode;
-            temp = temp.parent()[0];
-          }
+        }
+        if(pNode != null){
           return {
             x: pNode.x,
             y: pNode.y
           };
-        });
+        }
+        else{
+          return {
+            x: ele.position("x"),
+            y: ele.position("y")
+          };
+        }
+      });
     }
 
     afterReposition();
@@ -277,13 +293,7 @@ _CoSELayout.prototype.run = function () {
   /*
    * If animate option is not 'during' ('end' or false) perform these here (If it is 'during' similar things are already performed)
    */
-  if(this.options.animate == 'end'){
-    setTimeout(function() {  
-      self.options.eles.nodes().not(":parent").layoutPositions(self, self.options, getPositions); // Use layout positions to reposition the nodes it considers the options parameter
-      ready = false;
-    }, 0);
-  }
-  else if(this.options.animate == false){
+  if(this.options.animate !== "during"){
     self.options.eles.nodes().not(":parent").layoutPositions(self, self.options, getPositions); // Use layout positions to reposition the nodes it considers the options parameter
     ready = false;
   }
@@ -318,7 +328,6 @@ _CoSELayout.prototype.processChildrenList = function (parent, children, layout) 
   var size = children.length;
   for (var i = 0; i < size; i++) {
     var theChild = children[i];
-    this.options.eles.nodes().length;
     var children_of_children = theChild.children();
     var theNode;    
 
@@ -379,8 +388,6 @@ _CoSELayout.prototype.processChildrenList = function (parent, children, layout) 
  */
 _CoSELayout.prototype.stop = function () {
   this.stopped = true;
-  
-  this.trigger('layoutstop');
 
   return this; // chaining
 };

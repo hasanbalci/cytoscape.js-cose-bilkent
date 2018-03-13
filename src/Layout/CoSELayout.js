@@ -86,25 +86,34 @@ CoSELayout.prototype.layout = function () {
 };
 
 CoSELayout.prototype.classicLayout = function () {
-  this.calculateNodesToApplyGravitationTo();
+  this.nodesWithGravity = this.calculateNodesToApplyGravitationTo();
+  this.graphManager.setAllNodesToApplyGravitation(this.nodesWithGravity);
   this.calcNoOfChildrenForAllNodes();
   this.graphManager.calcLowestCommonAncestors();
   this.graphManager.calcInclusionTreeDepths();
   this.graphManager.getRoot().calcEstimatedSize();
   this.calcIdealEdgeLengths();
+  
   if (!this.incremental)
   {
     var forest = this.getFlatForest();
 
     // The graph associated with this layout is flat and a forest
     if (forest.length > 0)
-
     {
       this.positionNodesRadially(forest);
     }
     // The graph associated with this layout is not flat or a forest
     else
     {
+      // Reduce the trees when incremental mode is not enabled and graph is not a forest 
+      this.reduceTrees();
+      // Update nodes that gravity will be applied
+      this.graphManager.resetAllNodesToApplyGravitation();
+      var allNodes = new Set(this.getAllNodes());
+      var intersection = this.nodesWithGravity.filter(x => allNodes.has(x));
+      this.graphManager.setAllNodesToApplyGravitation(intersection);
+      
       this.positionNodesRandomly();
     }
   }
@@ -121,22 +130,69 @@ var edgesDetail;
 CoSELayout.prototype.tick = function() {
   this.totalIterations++;
   
-  if (this.totalIterations === this.maxIterations) {
-    return true; // Layout is not ended return true
+  if (this.totalIterations === this.maxIterations && !this.isTreeGrowing && !this.isGrowthFinished) {
+    if(this.prunedNodesAll.length > 0){
+      this.isTreeGrowing = true;
+    }
+    else {
+      return true;  
+    }
   }
   
-  if (this.totalIterations % FDLayoutConstants.CONVERGENCE_CHECK_PERIOD == 0)
+  if (this.totalIterations % FDLayoutConstants.CONVERGENCE_CHECK_PERIOD == 0  && !this.isTreeGrowing && !this.isGrowthFinished)
   {
     if (this.isConverged())
     {
-      return true; // Layout is not ended return true
+      if(this.prunedNodesAll.length > 0){
+        this.isTreeGrowing = true;
+      }
+      else {
+        return true;  
+      } 
     }
 
     this.coolingFactor = this.initialCoolingFactor *
             ((this.maxIterations - this.totalIterations) / this.maxIterations);
     this.animationPeriod = Math.ceil(this.initialAnimationPeriod * Math.sqrt(this.coolingFactor));
-
   }
+  // Operations while tree is growing again 
+  if(this.isTreeGrowing){
+    if(this.growTreeIterations % 10 == 0){
+      if(this.prunedNodesAll.length > 0) {
+        this.graphManager.updateBounds();
+        this.updateGrid();
+        this.growTree(this.prunedNodesAll);
+        // Update nodes that gravity will be applied
+        this.graphManager.resetAllNodesToApplyGravitation();
+        var allNodes = new Set(this.getAllNodes());
+        var intersection = this.nodesWithGravity.filter(x => allNodes.has(x));
+        this.graphManager.setAllNodesToApplyGravitation(intersection);
+        
+        this.graphManager.updateBounds();
+        this.updateGrid(); 
+        this.coolingFactor = FDLayoutConstants.DEFAULT_COOLING_FACTOR_INCREMENTAL; 
+      }
+      else {
+        this.isTreeGrowing = false;  
+        this.isGrowthFinished = true; 
+      }
+    }
+    this.growTreeIterations++;
+  }
+  // Operations after growth is finished
+  if(this.isGrowthFinished){
+    if (this.isConverged())
+    {
+      return true;  
+    }
+    if(this.afterGrowthIterations % 10 == 0){
+      this.graphManager.updateBounds();
+      this.updateGrid(); 
+    }
+    this.coolingFactor = FDLayoutConstants.DEFAULT_COOLING_FACTOR_INCREMENTAL * ((100 - this.afterGrowthIterations) / 100);
+    this.afterGrowthIterations++;
+  }
+  
   this.totalDisplacement = 0;
   this.graphManager.updateBounds();
   edgesDetail = this.calcSpringForces();
@@ -170,7 +226,6 @@ CoSELayout.prototype.getPositionsData = function() {
       displacementY: nodesDetail[i].displacementY
     };
   }
-  
   return pData;
 };
 
@@ -188,7 +243,7 @@ CoSELayout.prototype.getEdgesData = function() {
       yLength: (edgesDetail[i] != null) ? edgesDetail[i].yLength : ""
     };
   }
-  
+
   return eData;
 };
 
@@ -230,7 +285,7 @@ CoSELayout.prototype.calculateNodesToApplyGravitationTo = function () {
     }
   }
 
-  this.graphManager.setAllNodesToApplyGravitation(nodeList);
+  return nodeList;
 };
 
 CoSELayout.prototype.calcNoOfChildrenForAllNodes = function ()
