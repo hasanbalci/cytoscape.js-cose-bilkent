@@ -102,12 +102,17 @@ CoSENode.prototype.setPred1 = function (pred1)
 
 CoSENode.prototype.getPred1 = function ()
 {
-  return pred1;
+  return this.pred1;
+};
+
+CoSENode.prototype.setPred2 = function (pred2)
+{
+  this.pred2 = pred2;
 };
 
 CoSENode.prototype.getPred2 = function ()
 {
-  return pred2;
+  return this.pred2;
 };
 
 CoSENode.prototype.setNext = function (next)
@@ -117,7 +122,7 @@ CoSENode.prototype.setNext = function (next)
 
 CoSENode.prototype.getNext = function ()
 {
-  return next;
+  return this.next;
 };
 
 CoSENode.prototype.setProcessed = function (processed)
@@ -127,7 +132,7 @@ CoSENode.prototype.setProcessed = function (processed)
 
 CoSENode.prototype.isProcessed = function ()
 {
-  return processed;
+  return this.processed;
 };
 
 module.exports = CoSENode;

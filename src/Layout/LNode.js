@@ -5,8 +5,10 @@ var LayoutConstants = require('./LayoutConstants');
 var RandomSeed = require('./RandomSeed');
 var PointD = require('./PointD');
 var HashSet = require('./HashSet');
+var Layout;
 
 function LNode(gm, loc, size, vNode) {
+  Layout = require('./Layout');
   //Alternative constructor 1 : LNode(LGraphManager gm, Point loc, Dimension size, Object vNode)
   if (size == null && vNode == null) {
     vNode = loc;
@@ -15,7 +17,7 @@ function LNode(gm, loc, size, vNode) {
   LGraphObject.call(this, vNode);
 
   //Alternative constructor 2 : LNode(Layout layout, Object vNode)
-  if (gm.graphManager != null)
+  if (gm instanceof Layout && gm.graphManager != null)
     gm = gm.graphManager;
 
   this.estimatedSize = Integer.MIN_VALUE;

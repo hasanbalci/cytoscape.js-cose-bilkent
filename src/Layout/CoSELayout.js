@@ -58,6 +58,8 @@ CoSELayout.prototype.initParameters = function () {
 
     this.useSmartIdealEdgeLengthCalculation =
             CoSEConstants.DEFAULT_USE_SMART_IDEAL_EDGE_LENGTH_CALCULATION;
+    this.useMultiLevelScaling =
+            CoSEConstants.DEFAULT_USE_MULTI_LEVEL_SCALING;
     this.springConstant =
             FDLayoutConstants.DEFAULT_SPRING_STRENGTH;
     this.repulsionConstant =
@@ -80,9 +82,51 @@ CoSELayout.prototype.layout = function () {
     this.createBendpoints();
     this.graphManager.resetAllEdges();
   }
+  if(this.useMultiLevelScaling && !this.incremental)
+  {
+    console.log("Hello multilevel");
+    return this.multiLevelScalingLayout();
+  }
+  else {
+    this.level = 0;
+    return this.classicLayout();
+  }
+};
 
-  this.level = 0;
-  return this.classicLayout();
+CoSELayout.prototype.multiLevelScalingLayout = function () {
+  var gm = this.graphManager;
+  
+  // Start coarsening process
+
+  // save graph managers M0 to Mk in an array list
+  this.MList = gm.coarsenGraph();
+  
+  this.noOfLevels = this.MList.length-1;
+  this.level = this.noOfLevels;
+  
+  while (this.level >= 0)
+  {
+    this.graphManager = gm = this.MList[this.level];
+
+    console.log("@" + this.level + "th level, with " + gm.getAllNodes().length + " nodes. ");
+    this.classicLayout();
+    console.log("Layout is finished for this level");
+    // after finishing layout of first (coarsest) level,
+    this.incremental = true;
+
+    if (this.level >= 1) 
+    {	
+      this.uncoarsen(); // also makes initial placement for Mi-1
+    }
+
+    // reset total iterations
+    this.totalIterations = 0;
+
+    this.level--;
+  }
+  
+  this.incremental = false;
+  return true;
 };
 
 CoSELayout.prototype.classicLayout = function () {
@@ -107,7 +151,7 @@ CoSELayout.prototype.classicLayout = function () {
     else
     {
       // Reduce the trees when incremental mode is not enabled and graph is not a forest 
-      this.reduceTrees();
+//      this.reduceTrees();
       // Update nodes that gravity will be applied
       this.graphManager.resetAllNodesToApplyGravitation();
       var allNodes = new Set(this.getAllNodes());
@@ -539,6 +583,44 @@ CoSELayout.prototype.calcRepulsionRange = function () {
   return (2 * (this.level + 1) * this.idealEdgeLength);
 };
 
+// Multi-level Scaling method
+
+/**
+ * This method un-coarsens Mi to Mi-1 and makes initial placement for Mi-1
+ */
+CoSELayout.prototype.uncoarsen = function()
+{
+  var allNodes = this.graphManager.getAllNodes();
+  
+  for (var i = 0; i < allNodes.length; i++)
+  {
+    var v = allNodes[i];
+    // set positions of v.pred1 and v.pred2
+    v.getPred1().setCenter(v.getCenterX(), v.getCenterY());
+
+    if (v.getPred2() != null)
+    {
+      // TODO: check 
+      /*
+      double w = v.getPred1().getRect().width;
+      double l = this.idealEdgeLength;
+      v.getPred2().setLocation((v.getPred1().getLeft()+w+l), (v.getPred1().getTop()+w+l));
+      */
+      var distance = (Math.max(v.getPred1().getWidth(), v.getPred1().getHeight()) + Math.max(v.getPred2().getWidth(), v.getPred2().getHeight())) / 2 + 5;
+      console.log(distance);
+      var xPos = Math.random() * 2 * distance - distance;
+      console.log(xPos);
+      var yPos = Math.random() < 0.5 ? (Math.sqrt(distance * distance - xPos * xPos)) : (-1 * Math.sqrt(distance * distance - xPos * xPos));
+      console.log(yPos);
+      
+      v.getPred2().setCenter(v.getPred1().getCenterX + xPos, v.getPred1().getCenterY + yPos);
+      
+//      v.getPred2().setLocation(v.getLeft()+this.idealEdgeLength, 
+//              v.getTop()+this.idealEdgeLength);
+    }
+  }
+};
+
 // Tiling methods
 
 // Group zero degree members whose parents are not to be tiled, create dummy parents where needed and fill memberGroups by their dummp parent id's
@@ -721,7 +803,7 @@ CoSELayout.prototype.getNodeDegree = function (node) {
   // For the edges connected
   for (var i = 0; i < edges.length; i++) {
     var edge = edges[i];
-    if (edge.getSource().id !== edge.getTarget().id) {
+    if (edge.getSource().id != edge.getTarget().id) {
       degree = degree + 1;
     }
   }

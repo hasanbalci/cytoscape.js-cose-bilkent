@@ -8,8 +8,10 @@ var HashSet = require('./HashSet');
 var RectangleD = require('./RectangleD');
 var Point = require('./Point');
 var List = require('linkedlist-js').List;
+var Layout;
 
 function LGraph(parent, obj2, vGraph) {
+  Layout = require('./Layout');
   LGraphObject.call(this, vGraph);
   this.estimatedSize = Integer.MIN_VALUE;
   this.margin = LayoutConstants.DEFAULT_GRAPH_MARGIN;
