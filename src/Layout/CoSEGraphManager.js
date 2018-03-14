@@ -169,14 +169,14 @@ CoSEGraphManager.prototype.coarsenNodes = function(g, coarserG){
       {
         coarserG.add( v.getNext() );
         v.getNext().setProcessed(true);
+        // set location
+        v.getNext().setLocation(v.getLocation().x, v.getLocation().y);
+        v.getNext().setHeight(v.getHeight());
+        v.getNext().setWidth(v.getWidth());
+        v.getNext().id = v.id;
       }
     }
     //v.getNext().vGraphObject = v.vGraphObject;
-
-    // set location
-    v.getNext().setLocation(v.getLocation().x, v.getLocation().y);
-    v.getNext().setHeight(v.getHeight());
-    v.getNext().setWidth(v.getWidth());
   }
 };
 

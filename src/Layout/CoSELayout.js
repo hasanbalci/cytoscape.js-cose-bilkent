@@ -245,6 +245,11 @@ CoSELayout.prototype.tick = function() {
   nodesDetail = this.moveNodes();
   this.animate();
   
+  var animationData = this.getPositionsData(); // Get positions of layout nodes note that all nodes may not be layout nodes because of tiling
+  var edgeData = this.getEdgesData();
+  var event = new CustomEvent('send', { 'detail': [animationData, edgeData] });
+  window.dispatchEvent(event);
+  
   return false; // Layout is not ended yet return false
 };
 
