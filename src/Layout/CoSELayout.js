@@ -611,17 +611,17 @@ CoSELayout.prototype.uncoarsen = function()
       double l = this.idealEdgeLength;
       v.getPred2().setLocation((v.getPred1().getLeft()+w+l), (v.getPred1().getTop()+w+l));
       */
-      var distance = (Math.max(v.getPred1().getWidth(), v.getPred1().getHeight()) + Math.max(v.getPred2().getWidth(), v.getPred2().getHeight())) / 2 + 5;
-      console.log(distance);
-      var xPos = Math.random() * 2 * distance - distance;
-      console.log(xPos);
-      var yPos = Math.random() < 0.5 ? (Math.sqrt(distance * distance - xPos * xPos)) : (-1 * Math.sqrt(distance * distance - xPos * xPos));
-      console.log(yPos);
+//      var distance = (Math.max(v.getPred1().getWidth(), v.getPred1().getHeight()) + Math.max(v.getPred2().getWidth(), v.getPred2().getHeight())) / 2 + 5;
+//      console.log(distance);
+//      var xPos = Math.random() * 2 * distance - distance;
+//      console.log(xPos);
+//      var yPos = Math.random() < 0.5 ? (Math.sqrt(distance * distance - xPos * xPos)) : (-1 * Math.sqrt(distance * distance - xPos * xPos));
+//      console.log(yPos);
+//      
+//      v.getPred2().setCenter(v.getPred1().getCenterX + xPos, v.getPred1().getCenterY + yPos);
       
-      v.getPred2().setCenter(v.getPred1().getCenterX + xPos, v.getPred1().getCenterY + yPos);
-      
-//      v.getPred2().setLocation(v.getLeft()+this.idealEdgeLength, 
-//              v.getTop()+this.idealEdgeLength);
+      v.getPred2().setLocation(v.getLeft()+this.idealEdgeLength, 
+              v.getTop()+this.idealEdgeLength);
     }
   }
 };
